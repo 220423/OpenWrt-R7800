@@ -1,20 +1,20 @@
 #
 #
-# 感谢p3terx大神的一键编译脚本
+# 感谢 P3TERX 大神的一键编译脚本
 # 
 # Copyright (C) 2019 P3TERX <https://p3terx.com>
 # <https://github.com/P3TERX/Actions-OpenWrt.git>
 #
-name: 编译OpenWrt固件
+name: 编译 OpenWrt 固件
 on:
   workflow_dispatch:
     inputs:
       ssh:
-        description: 'SSH远程'
+        description: 'SSH 远程'
         required: false
         default: 'ssh-actions'
 
-#定时触发开始编译(把下面两个#去掉开启,时间设置请看定时编译说明)
+#定时触发开始编译（把下面两个 # 去掉开启，时间设置请看定时编译说明。）
 #  schedule:
 #    - cron: 0 8 */5 * *
 
@@ -23,6 +23,9 @@ env:
   LIENOL: https://github.com/Lienol/openwrt
   PROJECT: https://github.com/immortalwrt/immortalwrt
   GITURL: https://github.com/${{github.repository}}
+  Author: ${{github.actor}}
+  Run_number: ${{github.run_number}}
+  Run_workflow: ${{github.workflow}}
   TZ: Asia/Shanghai
 
 jobs:
@@ -34,7 +37,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [Project_x86_64,Lede_x86_64,Lienol_x86_64]
+        target: [Project_R7800,Lede_R7800,Lienol_R7800]
 
      # [Lede_x86_64,Lede_gl_mt300n_v2,Lede_nanopi_r2s,Lede_nanopi_r4s,Lede_newifi_d2,Lede_p2w_r619ac_128m,Lede_phicomm_k2p]
      # [Lede_phicomm_n1,Lede_redmi_ac2100,Lede_wankeyun,Lede_wndr3800,Lede_wndr4300_v1,Lede_xiaomi_r3pro,Lede_xiaoyu_c5,Lede_Raspberry_Pi4]
@@ -45,7 +48,7 @@ jobs:
 
      # 各个源码都直接打入了常用插件了，不需要自己再拉取插件，除非我的插件包跟源码自带的都没有，你就自己添加吧，说明的《各种命令的简单介绍》有教程。
      # 选择【Lede_phicomm_n1或Project_phicomm_n1】的机型文件夹编译的话，会自动编译出（ N1、微加云、贝壳云、我家云、S9xxx ）固件。
-     # [Lede_opewrt,Lienol_opewrt,Project_opewrt] 分别为三个源码的公共文件,你没找到你要编译的机型就使用各源码的公共文件夹来编译就可以了。
+     # [Lede_opewrt,Lienol_opewrt,Project_opewrt] 分别为三个源码的公共文件，你没找到你要编译的机型就使用各源码的公共文件夹来编译就可以了。
 
 
     steps:
@@ -72,14 +75,13 @@ jobs:
         echo "REGULAR_UPDATE=${REGULAR_UPDATE}" >> $GITHUB_ENV
         echo "Updete_firmware=${Updete_firmware}" >> $GITHUB_ENV
         echo "Extension=${Extension}" >> $GITHUB_ENV
-
     - name: 微信通知
       uses: emon100/Action-Serverchan@v2
       if: env.SERVERCHAN_SCKEY == 'true'
       with:
         SCKEY: ${{ secrets.SCKEY }}
         text: 主人${{matrix.target}}编译开始啦
-        desp: 主人您要编译的[${{matrix.target}}]固件正在努力耕耘中(#${{github.run_number}}),请耐心等待......
+        desp: 主人您要编译的[${{matrix.target}}]固件正在努力耕耘中(#${{github.run_number}})，请耐心等待......
      
     - name: 设置编译环境
       env:
@@ -120,8 +122,7 @@ jobs:
       run: |
         cd openwrt
         source "${PATH1}/common.sh" && Diy_notice
-
-    - name: 加载源、patches、files、diy和自定义
+    - name: 加载源，Patch 补丁和自定义设置。
       run: |
         cd openwrt
         source "${PATH1}/common.sh" && Diy_all
@@ -161,7 +162,7 @@ jobs:
           source "${PATH1}/upgrade.sh" && Diy_Part1
         fi
     
-    - name: SSH远程连接（若打开了此功能,在此转圈2分钟还展开不了,请看《SSH连接教程》）
+    - name: SSH 远程连接（若打开此功能，在此转圈 2 分钟还无法展开，请查看《SSH 连接教程》。）
       uses: 281677160/debugger-action@master
       if: env.SSH_ACTIONS == 'true' || (github.event.inputs.ssh == 'ssh' && github.event.inputs.ssh  != 'false')
       env:
@@ -191,7 +192,6 @@ jobs:
         make download -j8
         find dl -size -1024c -exec ls -l {} \;
         find dl -size -1024c -exec rm -f {} \;
-
     - name: 开始编译固件
       id: compile
       run: |
@@ -211,7 +211,6 @@ jobs:
          grep '^CONFIG_TARGET.*DEVICE.*=y' .config | sed -r 's/.*DEVICE_(.*)=y/\1/' > NAME1
          [ -s NAME1 ] && echo "NAME1=$(cat NAME1)" >> $GITHUB_ENV
         fi
-
     - name: 上传bin文件夹(固件+ipk)在github actions
       uses: actions/upload-artifact@v2
       if: steps.compile.outputs.status == 'success' && env.UPLOAD_BIN_DIR == 'true'
@@ -219,7 +218,7 @@ jobs:
         name: Bin_filename+ipk_${{ env.NAME2 }}_${{ env.NAME1 }}_${{ env.date }}
         path: openwrt/bin
 
-    - name: 编译N1机型时,打包（N1、微加云、贝壳云、我家云、S9xxx）固件
+    - name: 编译 N1 机型时，打包（N1、微加云、贝壳云、我家云、S9xxx）固件。
       run: |
         cd openwrt
         if [[ ${{matrix.target}} =~ (Lede_phicomm_n1|Project_phicomm_n1) ]]; then
@@ -282,7 +281,6 @@ jobs:
         echo "::warning file=cowtransfer.com::$(cat cowtransfer.log | grep https)"
         ./transfer wet -s -p 16 --no-progress ${FIRMWARE} 2>&1 | tee wetransfer.log
         echo "::warning file=wetransfer.com::$(cat wetransfer.log | grep https)"
-
     - name: 把定时更新固件发布到云端
       uses: softprops/action-gh-release@v1
       if: steps.organizer.outputs.status == 'success' && env.REGULAR_UPDATE == 'true'
@@ -319,4 +317,4 @@ jobs:
       with:
         SCKEY: ${{ secrets.SCKEY }}
         text: 恭喜主人${{ env.NAME2 }}_${{ env.NAME1 }}固件编译成功！
-        desp: 我亲爱的主人您使用${{matrix.target}}文件夹编译的[ ${{ env.NAME2 }}-${{ env.NAME1 }} ]固件(#${{github.run_number}})顺利编译完成了！
+desp: 我亲爱的主人您使用${{matrix.target}}文件夹编译的[ ${{ env.NAME2 }}-${{ env.NAME1 }} ]固件(#${{github.run_number}})顺利完成编译！
